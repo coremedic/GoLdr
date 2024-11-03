@@ -1,8 +1,0 @@
-github.com/amenzhinsky/go-memexec v0.7.1 h1:DVm4cXzklaNWZoTJgZUi/dlXtelhC7QBtX4luKjl1qk=
-github.com/amenzhinsky/go-memexec v0.7.1/go.mod h1:ApTO9/i2bcii7kvIXi74gum+/zYDzkiOXtuBZoYOKVE=
-github.com/coremedic/goldr v0.0.0-20231004230309-de7f140c420d h1:KwfJ0BAzPQBCj+OeY5yQU68aQMUh1kiZy2eEyjt0q4A=
-github.com/coremedic/goldr v0.0.0-20231004230309-de7f140c420d/go.mod h1:h6nd3HfivtYgPrnbC/SAGdb30YTMIO9ERgUnCASlgX8=
-github.com/enceve/crypto v0.0.0-20160707101852-34d48bb93815 h1:D22EM5TeYZJp43hGDx6dUng8mvtyYbB9BnE3+BmJR1Q=
-github.com/enceve/crypto v0.0.0-20160707101852-34d48bb93815/go.mod h1:wYFFK4LYXbX7j+76mOq7aiC/EAw2S22CrzPHqgsisPw=
-golang.org/x/sys v0.0.0-20210903071746-97244b99971b h1:3Dq0eVHn0uaQJmPO+/aYPI/fRMqdrVDbu7MQcku54gg=
-golang.org/x/sys v0.0.0-20210903071746-97244b99971b/go.mod h1:oPkhp1MJrh7nUepCBck5+mAzfO9JrbApNNgaTdGDITg=

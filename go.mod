@@ -1,15 +1,9 @@
-module github.com/coremedic/goldr
+module GoLdr
 
-go 1.20
-
-require (
-	github.com/enceve/crypto v0.0.0-20160707101852-34d48bb93815
-	github.com/spf13/cobra v1.7.0
-	github.com/ulikunitz/xz v0.5.11
-	golang.org/x/sys v0.13.0
-)
+go 1.23.2
 
 require (
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
+	github.com/spf13/cobra v1.8.1 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
 )
