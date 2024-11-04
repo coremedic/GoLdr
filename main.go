@@ -1,53 +1,37 @@
 package GoLdr
 
 import (
-	"GoLdr/pack"
-	_ "embed"
+	"embed"
 	"github.com/spf13/pflag"
+)
+
+var (
+	//go:embed stubs/PE/source/*
+	PEStubSrc embed.FS
+
+	//go:embed stubs/PE/include/*
+	PEStubInc embed.FS
 )
 
 func main() {
 	var (
-		payload   string
-		output    string
-		shellcode bool
-		dll       bool
-		exe       bool
+		payload string
+		output  string
+		dll     bool
+		exe     bool
 	)
 
 	// Define flags
 	pflag.StringVarP(&payload, "payload", "p", "", "Path to payload")
 	pflag.StringVarP(&output, "output", "o", "", "Path to output")
-	pflag.BoolVar(&shellcode, "shellcode", false, "Shellcode payload input type")
-	pflag.BoolVar(&dll, "dll", false, "DLL payload input type")
-	pflag.BoolVar(&exe, "exe", false, "EXE payload input type")
+	pflag.BoolVar(&exe, "exe", false, "EXE payload output type")
+	pflag.BoolVar(&dll, "dll", false, "DLL payload output type")
 
 	// Parse flags
 	pflag.Parse()
 
-	// Init options
-	var opts *pack.Options
-
-	switch {
-	case shellcode:
-		{
-			// Pack shellcode
-		}
-
-	case dll:
-		{
-			// Pack DLL
-		}
-
-	case exe:
-		{
-			// Pack EXE
-		}
-
-	default:
-		{
-			// Display error
-		}
-
+	if !exe && !dll {
+		exe = true
 	}
+
 }
