@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.30)
+cmake_minimum_required(VERSION 3.29)
 project(PE)
 
 set(CMAKE_CXX_STANDARD 20)
@@ -19,4 +19,7 @@ add_link_options(
 
 add_executable(PE source/main/MainExe.cpp
         source/PE.cpp
-        include/PE.hpp)
+        include/PE.hpp
+        source/main/MainExe.cpp
+        source/core/CtAes.c
+        include/core/CtAes.h)
