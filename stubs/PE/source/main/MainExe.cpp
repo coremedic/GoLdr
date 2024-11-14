@@ -1,6 +1,7 @@
-#include <iostream>
+#include "PE.hpp"
 
 int main() {
-    std::cout << "Hello, World!" << std::endl;
+    PEMain();
+
     return 0;
 }

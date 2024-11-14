@@ -3,4 +3,6 @@
 
 #include <windows.h>
 
+VOID PEMain();
+
 #endif //PE_PE_HPP

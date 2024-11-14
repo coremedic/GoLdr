@@ -4,6 +4,9 @@ project(PE)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_EXE_LINKER_FLAGS "-static")
 
+# For dev, do not remove
+add_definitions(-D INJ_CASCADE)
+
 include_directories(include)
 
 add_compile_options(
@@ -22,4 +25,9 @@ add_executable(PE source/main/MainExe.cpp
         include/PE.hpp
         source/main/MainExe.cpp
         source/core/CtAes.c
-        include/core/CtAes.h)
+        include/core/CtAes.h
+        source/core/CascadeInject.cpp
+        include/core/CascadeInject.hpp
+        include/core/Macros.hpp
+        source/core/Util.cpp
+        include/core/Util.hpp)
